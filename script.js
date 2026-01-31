@@ -1,9 +1,8 @@
-// ================== GLOBAL VARIABLES ==================
+
 let canvas;
 let ctx;
 let particles = [];
 
-// ================== DOM READY ==================
 document.addEventListener('DOMContentLoaded', () => {
     // Canvas setup
     canvas = document.getElementById('background-canvas');
@@ -31,13 +30,11 @@ document.addEventListener('DOMContentLoaded', () => {
     setupProjectHover();
 });
 
-// ================== CANVAS ==================
 function resizeCanvas() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 }
 
-// ================== PARTICLES ==================
 class Particle {
     constructor() {
         this.x = Math.random() * canvas.width;
@@ -113,7 +110,6 @@ function animate() {
     requestAnimationFrame(animate);
 }
 
-// ================== THEME TOGGLE ==================
 function setupThemeToggle() {
     const toggle = document.getElementById('theme-toggle');
     const icon = toggle.querySelector('i');
@@ -139,7 +135,6 @@ function setupThemeToggle() {
     });
 }
 
-// ================== MOBILE MENU ==================
 function setupMobileMenu() {
     const toggle = document.getElementById('mobile-toggle');
     const nav = document.querySelector('.nav-links');
@@ -159,7 +154,6 @@ function setupMobileMenu() {
     });
 }
 
-// ================== HEADER SCROLL ==================
 function setupHeaderScroll() {
     const header = document.getElementById('header');
     window.addEventListener('scroll', () => {
@@ -167,7 +161,6 @@ function setupHeaderScroll() {
     });
 }
 
-// ================== RESUME DOWNLOAD ==================
 function setupResumeDownload() {
     const btn = document.getElementById('download-resume');
     btn.addEventListener('click', () => {
@@ -181,7 +174,6 @@ function setupResumeDownload() {
     });
 }
 
-// ================== TYPING EFFECT ==================
 function setupTypingEffect() {
     const el = document.querySelector('.typing-text');
     const text = 'Saravanan R';
@@ -194,7 +186,6 @@ function setupTypingEffect() {
     setTimeout(type, 1000);
 }
 
-// ================== RIPPLE EFFECT ==================
 function setupRippleEffect() {
     document.querySelectorAll('.skill-tag, .tech-tag').forEach(tag => {
         tag.addEventListener('mouseenter', e => {
@@ -206,7 +197,6 @@ function setupRippleEffect() {
     });
 }
 
-// ================== OBSERVER ==================
 function setupIntersectionObserver() {
     const observer = new IntersectionObserver(entries => {
         entries.forEach(e => e.isIntersecting && e.target.classList.add('animated'));
@@ -216,16 +206,15 @@ function setupIntersectionObserver() {
         .forEach(el => observer.observe(el));
 }
 
-// ================== FLOATING ICONS ==================
 function setupFloatingIcons() {
     document.querySelectorAll('.floating-icon')
         .forEach((icon, i) => icon.style.animationDelay = `${i * 3}s`);
 }
 
-// ================== PROJECT HOVER ==================
 function setupProjectHover() {
     document.querySelectorAll('.project-image').forEach(img => {
         img.addEventListener('mouseenter', () => img.style.transform = 'scale(1.02)');
         img.addEventListener('mouseleave', () => img.style.transform = 'scale(1)');
     });
 }
+
