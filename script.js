@@ -1,220 +1,280 @@
 
-let canvas;
-let ctx;
-let particles = [];
+(() => {
+    'use strict';
 
-document.addEventListener('DOMContentLoaded', () => {
-    // Canvas setup
-    canvas = document.getElementById('background-canvas');
-    if (!canvas) {
-        console.error('Canvas not found');
-        return;
+    /* =======================
+       GLOBAL STATE
+    ======================= */
+    const state = {
+        canvas: null,
+        ctx: null,
+        particles: [],
+        particleColor: '#2563eb',
+        maxParticles: 100,
+        connectDistance: 100
+    };
+
+    /* =======================
+       INIT
+    ======================= */
+    document.addEventListener('DOMContentLoaded', init);
+
+    function init() {
+        setupCanvas();
+        setupTheme();
+        setupUI();
+        setupEffects();
+
+        initParticles();
+        animate();
+
+        window.addEventListener('resize', onResize);
+        document.addEventListener('visibilitychange', handleVisibility);
     }
 
-    ctx = canvas.getContext('2d');
-    resizeCanvas();
+    /* =======================
+       CANVAS & PARTICLES
+    ======================= */
+    function setupCanvas() {
+        state.canvas = document.getElementById('background-canvas');
+        if (!state.canvas) return;
 
-    initParticles();
-    animate();
-
-    // Events
-    window.addEventListener('resize', resizeCanvas);
-    setupThemeToggle();
-    setupMobileMenu();
-    setupHeaderScroll();
-    setupResumeDownload();
-    setupTypingEffect();
-    setupRippleEffect();
-    setupIntersectionObserver();
-    setupFloatingIcons();
-    setupProjectHover();
-});
-
-function resizeCanvas() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-}
-
-class Particle {
-    constructor() {
-        this.x = Math.random() * canvas.width;
-        this.y = Math.random() * canvas.height;
-        this.size = Math.random() * 3 + 1;
-        this.speedX = Math.random() - 0.5;
-        this.speedY = Math.random() - 0.5;
-        this.alpha = Math.random() * 0.5 + 0.1;
-        this.color =
-            getComputedStyle(document.documentElement)
-                .getPropertyValue('--primary-color')
-                .trim() || '#2563eb';
+        state.ctx = state.canvas.getContext('2d');
+        updateCanvasSize();
+        updateThemeColor();
     }
 
-    update() {
-        this.x += this.speedX;
-        this.y += this.speedY;
-
-        if (this.x < 0) this.x = canvas.width;
-        if (this.x > canvas.width) this.x = 0;
-        if (this.y < 0) this.y = canvas.height;
-        if (this.y > canvas.height) this.y = 0;
+    function updateCanvasSize() {
+        state.canvas.width = window.innerWidth;
+        state.canvas.height = window.innerHeight;
     }
 
-    draw() {
-        ctx.globalAlpha = this.alpha;
-        ctx.fillStyle = this.color;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-        ctx.fill();
+    class Particle {
+        constructor() {
+            this.reset();
+        }
+
+        reset() {
+            this.x = Math.random() * state.canvas.width;
+            this.y = Math.random() * state.canvas.height;
+            this.size = Math.random() * 2 + 1;
+            this.vx = Math.random() - 0.5;
+            this.vy = Math.random() - 0.5;
+            this.alpha = Math.random() * 0.4 + 0.2;
+        }
+
+        update() {
+            this.x += this.vx;
+            this.y += this.vy;
+
+            if (this.x < 0 || this.x > state.canvas.width) this.vx *= -1;
+            if (this.y < 0 || this.y > state.canvas.height) this.vy *= -1;
+        }
+
+        draw(ctx) {
+            ctx.globalAlpha = this.alpha;
+            ctx.fillStyle = state.particleColor;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+            ctx.fill();
+        }
     }
-}
 
-function initParticles() {
-    particles = [];
-    const count = Math.min(100, (canvas.width * canvas.height) / 10000);
-    for (let i = 0; i < count; i++) {
-        particles.push(new Particle());
+    function initParticles() {
+        state.particles = [];
+        const count = Math.min(
+            state.maxParticles,
+            (state.canvas.width * state.canvas.height) / 12000
+        );
+
+        for (let i = 0; i < count; i++) {
+            state.particles.push(new Particle());
+        }
     }
-}
 
-function connectParticles() {
-    for (let i = 0; i < particles.length; i++) {
-        for (let j = i + 1; j < particles.length; j++) {
-            const dx = particles[i].x - particles[j].x;
-            const dy = particles[i].y - particles[j].y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
+    function connectParticles() {
+        const { ctx, particles, connectDistance } = state;
 
-            if (distance < 100) {
-                ctx.strokeStyle =
-                    getComputedStyle(document.documentElement)
-                        .getPropertyValue('--primary-color')
-                        .trim() || '#2563eb';
-                ctx.globalAlpha = 0.1 * (1 - distance / 100);
-                ctx.beginPath();
-                ctx.moveTo(particles[i].x, particles[i].y);
-                ctx.lineTo(particles[j].x, particles[j].y);
-                ctx.stroke();
+        for (let i = 0; i < particles.length; i++) {
+            for (let j = i + 1; j < particles.length; j++) {
+                const dx = particles[i].x - particles[j].x;
+                const dy = particles[i].y - particles[j].y;
+                const dist = dx * dx + dy * dy;
+
+                if (dist < connectDistance * connectDistance) {
+                    ctx.globalAlpha = 0.15;
+                    ctx.strokeStyle = state.particleColor;
+                    ctx.beginPath();
+                    ctx.moveTo(particles[i].x, particles[i].y);
+                    ctx.lineTo(particles[j].x, particles[j].y);
+                    ctx.stroke();
+                }
             }
         }
     }
-}
 
-function animate() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    function animate() {
+        if (!state.ctx) return;
 
-    particles.forEach(p => {
-        p.update();
-        p.draw();
-    });
+        state.ctx.clearRect(0, 0, state.canvas.width, state.canvas.height);
 
-    connectParticles();
-    requestAnimationFrame(animate);
-}
+        state.particles.forEach(p => {
+            p.update();
+            p.draw(state.ctx);
+        });
 
-function setupThemeToggle() {
-    const toggle = document.getElementById('theme-toggle');
-    const icon = toggle.querySelector('i');
-
-    const saved = localStorage.getItem('theme') || 'light';
-    if (saved === 'dark') {
-        document.body.classList.add('dark-mode');
-        icon.classList.replace('fa-moon', 'fa-sun');
+        connectParticles();
+        requestAnimationFrame(animate);
     }
 
-    toggle.addEventListener('click', () => {
-        document.body.classList.toggle('dark-mode');
-        const dark = document.body.classList.contains('dark-mode');
-        icon.classList.toggle('fa-sun', dark);
-        icon.classList.toggle('fa-moon', !dark);
-        localStorage.setItem('theme', dark ? 'dark' : 'light');
+    /* =======================
+       THEME
+    ======================= */
+    function setupTheme() {
+        const toggle = document.getElementById('theme-toggle');
+        if (!toggle) return;
 
-        particles.forEach(p => {
-            p.color = getComputedStyle(document.documentElement)
+        const icon = toggle.querySelector('i');
+        const saved = localStorage.getItem('theme');
+
+        if (saved === 'dark') {
+            document.body.classList.add('dark-mode');
+            icon?.classList.replace('fa-moon', 'fa-sun');
+        }
+
+        toggle.addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+            const dark = document.body.classList.contains('dark-mode');
+
+            icon?.classList.toggle('fa-sun', dark);
+            icon?.classList.toggle('fa-moon', !dark);
+
+            localStorage.setItem('theme', dark ? 'dark' : 'light');
+            updateThemeColor();
+        });
+    }
+
+    function updateThemeColor() {
+        state.particleColor =
+            getComputedStyle(document.documentElement)
                 .getPropertyValue('--primary-color')
-                .trim();
-        });
-    });
-}
-
-function setupMobileMenu() {
-    const toggle = document.getElementById('mobile-toggle');
-    const nav = document.querySelector('.nav-links');
-
-    toggle.addEventListener('click', () => {
-        nav.classList.toggle('active');
-        toggle.innerHTML = nav.classList.contains('active')
-            ? '<i class="fas fa-times"></i>'
-            : '<i class="fas fa-bars"></i>';
-    });
-
-    document.querySelectorAll('.nav-links a').forEach(link => {
-        link.addEventListener('click', () => {
-            nav.classList.remove('active');
-            toggle.innerHTML = '<i class="fas fa-bars"></i>';
-        });
-    });
-}
-
-function setupHeaderScroll() {
-    const header = document.getElementById('header');
-    window.addEventListener('scroll', () => {
-        header.classList.toggle('header-scrolled', window.scrollY > 100);
-    });
-}
-
-function setupResumeDownload() {
-    const btn = document.getElementById('download-resume');
-    btn.addEventListener('click', () => {
-        const blob = new Blob(['Saravanan R - Resume'], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'Saravanan_R_Resume.txt';
-        a.click();
-        URL.revokeObjectURL(url);
-    });
-}
-
-function setupTypingEffect() {
-    const el = document.querySelector('.typing-text');
-    const text = 'Saravanan R';
-    let i = 0;
-
-    function type() {
-        el.textContent = text.slice(0, i++);
-        if (i <= text.length) setTimeout(type, 120);
+                .trim() || state.particleColor;
     }
-    setTimeout(type, 1000);
-}
 
-function setupRippleEffect() {
-    document.querySelectorAll('.skill-tag, .tech-tag').forEach(tag => {
-        tag.addEventListener('mouseenter', e => {
-            const span = document.createElement('span');
-            span.className = 'ripple';
-            tag.appendChild(span);
-            setTimeout(() => span.remove(), 600);
+    /* =======================
+       UI SETUP
+    ======================= */
+    function setupUI() {
+        setupMobileMenu();
+        setupHeaderScroll();
+        setupResumeDownload();
+        setupTypingEffect();
+    }
+
+    function setupMobileMenu() {
+        const toggle = document.getElementById('mobile-toggle');
+        const nav = document.querySelector('.nav-links');
+        if (!toggle || !nav) return;
+
+        toggle.addEventListener('click', () => {
+            nav.classList.toggle('active');
+            toggle.innerHTML = nav.classList.contains('active')
+                ? '<i class="fas fa-times"></i>'
+                : '<i class="fas fa-bars"></i>';
         });
-    });
-}
+    }
 
-function setupIntersectionObserver() {
-    const observer = new IntersectionObserver(entries => {
-        entries.forEach(e => e.isIntersecting && e.target.classList.add('animated'));
-    }, { threshold: 0.1 });
+    function setupHeaderScroll() {
+        const header = document.getElementById('header');
+        if (!header) return;
 
-    document.querySelectorAll('.skill-card, .timeline-item, .education-card, .contact-item')
-        .forEach(el => observer.observe(el));
-}
+        window.addEventListener('scroll', () => {
+            header.classList.toggle('header-scrolled', window.scrollY > 80);
+        });
+    }
 
-function setupFloatingIcons() {
-    document.querySelectorAll('.floating-icon')
-        .forEach((icon, i) => icon.style.animationDelay = `${i * 3}s`);
-}
+    function setupResumeDownload() {
+        const btn = document.getElementById('download-resume');
+        if (!btn) return;
 
-function setupProjectHover() {
-    document.querySelectorAll('.project-image').forEach(img => {
-        img.addEventListener('mouseenter', () => img.style.transform = 'scale(1.02)');
-        img.addEventListener('mouseleave', () => img.style.transform = 'scale(1)');
-    });
-}
+        btn.addEventListener('click', () => {
+            window.open('assets/Saravanan_R_Resume.pdf', '_blank');
+        });
+    }
 
+    function setupTypingEffect() {
+        const el = document.querySelector('.typing-text');
+        if (!el) return;
+
+        const text = 'Saravanan R';
+        let i = 0;
+
+        const type = () => {
+            el.textContent = text.slice(0, i++);
+            if (i <= text.length) setTimeout(type, 100);
+        };
+
+        setTimeout(type, 800);
+    }
+
+    /* =======================
+       EFFECTS
+    ======================= */
+    function setupEffects() {
+        setupIntersectionObserver();
+        setupRippleEffect();
+        setupFloatingIcons();
+        setupProjectHover();
+    }
+
+    function setupIntersectionObserver() {
+        const observer = new IntersectionObserver(
+            entries => {
+                entries.forEach(e => {
+                    if (e.isIntersecting) e.target.classList.add('animated');
+                });
+            },
+            { threshold: 0.15 }
+        );
+
+        document.querySelectorAll(
+            '.skill-card, .timeline-item, .education-card, .contact-item'
+        ).forEach(el => observer.observe(el));
+    }
+
+    function setupRippleEffect() {
+        document.querySelectorAll('.skill-tag, .tech-tag').forEach(tag => {
+            tag.addEventListener('mouseenter', () => {
+                const ripple = document.createElement('span');
+                ripple.className = 'ripple';
+                tag.appendChild(ripple);
+                setTimeout(() => ripple.remove(), 600);
+            });
+        });
+    }
+
+    function setupFloatingIcons() {
+        document.querySelectorAll('.floating-icon').forEach((icon, i) => {
+            icon.style.animationDelay = `${i * 2.5}s`;
+        });
+    }
+
+    function setupProjectHover() {
+        document.querySelectorAll('.project-image').forEach(img => {
+            img.addEventListener('mouseenter', () => img.style.transform = 'scale(1.03)');
+            img.addEventListener('mouseleave', () => img.style.transform = 'scale(1)');
+        });
+    }
+
+    /* =======================
+       HELPERS
+    ======================= */
+    function onResize() {
+        updateCanvasSize();
+        initParticles();
+    }
+
+    function handleVisibility() {
+        if (document.hidden) state.ctx?.clearRect(0, 0, state.canvas.width, state.canvas.height);
+    }
+})();
